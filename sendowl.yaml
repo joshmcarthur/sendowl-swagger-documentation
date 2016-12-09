@@ -1,0 +1,356 @@
+# Example YAML to get you started quickly.
+# Be aware that YAML has indentation based scoping.
+# Code completion support is available so start typing for available options.
+swagger: '2.0'
+
+# This is your document metadata
+info:
+  version: "1.0.0"
+  title: API - SendOwl
+  description: |
+    The SendOwl API allows third party applications to access and update data   associated with customer accounts. Potential uses for this include apps for mobile devices, integrating your site and our service at a deeper level to provide a members-area, and developing a complex reporting system.
+    
+    
+host: www.sendowl.com
+schemes:
+  - http
+  - https
+consumes:
+  - application/json
+  - text/xml
+produces:
+  - application/json
+  - text/html
+basePath: /api/v1
+securityDefinitions:
+  basicAuth:
+    type: basic
+    description: |
+      HTTP Basic Authentication. Works over `HTTP` and `HTTPS`.
+      In order for API calls to be accepted they must be sent with authorisation information. Specifically, an API key and secret must be passed through via Basic Auth. By default the API is not enabled on accounts so you must navigate to the Settings section, click the API link in the Advanced section and follow onscreen instructions to set this up. Once enabled the API key and secret will be shown and you must use this in all requests to the API.
+
+
+# Describe your paths here
+paths:
+  # This is a path endpoint. Change it.
+  /products/{id}:
+    # This is a HTTP operation
+    get:
+      security:
+       - basicAuth: []
+      # Describe this verb here. Note: you can use markdown
+      description: |
+        Returns a specific product
+      # This is array of GET operation parameters:
+      parameters:
+        # An example parameter that is in query and is required
+        -
+          name: id
+          in: path
+          description: Product ID to look up
+          required: true
+          type: number
+          format: integer
+      # Expected responses for this operation:
+      responses:
+        # Response code
+        200:
+          description: Successful response
+          # A schema describing your response object.
+          # Use JSON Schema format
+          schema:
+            $ref: "#/definitions/ProductContainer"
+        404:
+          description: Product not found
+    put:
+      security:
+        - basicAuth: []
+      description: Updates a product
+      parameters:
+        # An example parameter that is in query and is required
+        -
+          name: id
+          in: path
+          description: Product ID to update
+          required: true
+          type: number
+          format: integer
+      # Expected responses for this operation:
+      responses:
+        # Response code
+        200:
+          description: Successful update
+          # A schema describing your response object.
+          # Use JSON Schema format
+          schema:
+            $ref: "#/definitions/ProductContainer"
+        404:
+          description: Product not found
+        422:
+          description: Product failed to validate
+          schema: 
+            $ref: "#/definitions/ValidationErrors"
+    delete:
+      security:
+        - basicAuth: []
+      description: Deletes a product
+      parameters:
+        # An example parameter that is in query and is required
+        -
+          name: id
+          in: path
+          description: Product ID to delete
+          required: true
+          type: number
+          format: integer
+      # Expected responses for this operation:
+      responses:
+        # Response code
+        200:
+          description: Successful deletion
+        404:
+          description: Product not found
+  /products/{id}/issue:
+    post:
+      security:
+        - basicAuth: []
+      description: |
+        Issue an order of this product. Useful for your own gateway or 3rd party gateways not natively supported by SendOwl
+      parameters:
+        -
+          name: id
+          in: path
+          description: Product ID to create an order for
+          required: true
+          type: number
+          format: integer
+        - in: body
+          name: body
+          description: Order object to use to issue the product
+          required: false
+          schema:
+            $ref: "#/definitions/OrderContainer"
+      responses:
+        # Response code
+        201:
+          description: Issue succeeded
+        404:
+          description: Product not found
+        422: 
+          description: Issue failed to validate 
+          schema:
+            $ref: "#/definitions/ValidationErrors"
+  /products:
+    post:
+      security: 
+        - basicAuth: []
+      description: |
+        Creates a new product. As a XML or JSON request cannot include a file, this request must be done via a multi-part form request (as it would be done in a browser). To do this use the product[field] syntax for the product fields and include the file under product[attachment] field. An example is shown below using the curl tool.
+      parameters:
+        - in: body
+          name: body
+          description: Product object that needs to be added to the store
+          required: false
+          schema:
+            $ref: "#/definitions/ProductContainer"
+      responses:
+        201: 
+          description: Product created
+          schema:
+            $ref: "#/definitions/ProductContainer"
+        422:
+          description: Provided attributes were invalid
+          schema:
+            $ref: "#/definitions/ValidationErrors"
+          
+    get:
+      security: 
+        - basicAuth: []
+      description: |
+        Returns all possible products
+      parameters:
+        -
+          name: page
+          in: query
+          description: The page of results to find
+          type: number
+          format: integer
+          default: 1
+        - 
+          name: per_page
+          type: number
+          format: integer
+          in: query
+          description: "The number of results per page to find (Max: 50)"
+          default: 10
+      responses:
+        200: 
+          description: Successful response
+          schema:
+            type: array
+            items: 
+              $ref: "#/definitions/ProductContainer"
+  /products/search:
+    get:
+      security: 
+        - basicAuth: []
+      description: |
+        Searches for a specific product by name. This is useful when you know the name but not the product ID. If you know the product ID use the show endpoint. The response format is the same as the index action - that is a set of products that match the criteria
+      parameters:
+        -
+          name: term
+          in: query
+          description: The criteria to find products by
+          type: string
+          required: true
+      responses:
+        200: 
+          description: Successful response
+          schema:
+            type: array
+            items: 
+              $ref: "#/definitions/ProductContainer"
+  /products/shopify_lookup:
+    get:
+      security: 
+        - basicAuth: []
+      description: |
+        Searches for a specific product by Shopify variant ID. This is useful when you need to know which product is associated with your Shopify variant. If you know the product ID use the show endpoint. The response format is the same as the index action - that is a set of products that match the criteria.
+      parameters:
+        -
+          name: variant_id
+          in: query
+          description: The Shopify variant ID to find products by
+          type: number
+          required: true
+      responses:
+        200: 
+          description: Successful response
+          schema:
+            type: array
+            items: 
+              $ref: "#/definitions/ProductContainer"
+definitions:
+  ValidationErrors:
+    type: array
+    items:
+      type: array
+      description: An array of arrays containing attribute, error message
+      items:
+        type: string
+        description: An array of attribute, error message
+  Attachment:
+    description: |
+              When using create/update upload the file against the attachment attribute of the product. When reading the Attachment attributes will be present.
+    type: object
+    properties:
+      filename:
+        type: string
+        description: the name of the file uploaded
+      size:
+        type: integer
+        description: the size of the attached file in bytes
+  ProductContainer:
+    type: object
+    properties:
+      product:
+        $ref: "#/definitions/Product"
+  OrderContainer:
+    type: object
+    properties:
+      order:
+        $ref: "#/definitions/Order"
+  Order:
+    type: object
+    properties:
+      buyer_email:
+        type: string
+        description: the buyers email
+      buyer_name:
+        type: string
+        description: the buyers name
+  Product:
+    type: object
+    properties:
+      id:
+        type: number
+        format: integer
+        description: The unique number representing this product
+        readOnly: true
+      name:
+        type: string
+        description: the name given to the product
+      attachment:
+        $ref: "#/definitions/Attachment"
+      price:
+        type: number
+        format: double
+        description: the price the product is sold at
+      pdf_stamping:
+        type: boolean
+        description: Whether pdf stamping is switched on (only useable when the file is a PDF)
+      sales_limit:
+        type: number
+        description: limit to the total number of times the product can be sold
+      self_hosted_url:
+        type: string
+        description: The url of the file to be issued at download (only useable when the product is self hosted)
+      license_fetch_url:
+        type: string
+        description: The url to fetch the license from (only useable when the software has a license type of url)
+      shopify_variant_id:
+        type: string
+        description: The variant id of the Shopify item when using SendOwl with Shopify
+      custom_field:
+        type: string
+        description: If a custom field has been enabled for products then its value will be in this variable
+      override_currency_code:
+        type: string
+        description: The currency to sell the product if not the account currency (ISO 4217)
+      currency_code:
+        type: string
+        description: the currency the product is sold in (ISO 4217)
+        readOnly: true
+      productImageUrl:
+        type: string
+        description: the product image url (if present)
+        readOnly: true
+      instant_buy_url:
+        type: string
+        description: the instant buy url for the product
+        readOnly: true
+      add_to_cart_url:
+        type: string
+        description: the add to cart url for the product
+        readOnly: true
+      license_type:
+        type: string
+        enum: 
+          - generated
+          - list
+          - url
+        description: |
+          The type of license issuing used (only useable when the product is software):
+          
+          * generated	- The license key is generated by SendOwl
+          * list - The license key is fetched from a list uploaded to SendOwl
+          * url - The license key is fetched from a url (see the field license_fetch_url)
+      product_type:
+        type: string
+        description: |
+          The type of product:
+          
+          * digital - digital goods have a file associated with them and are delivered automatically once the order reaches the complete state
+          * software - software is the same as a digital good but it also has a license that is allocated upon order completion
+          * redirect	redirect goods don't issue a download but redirect to a url after payment
+          * tangible -	tangible goods are physical items that the merchant stock and ships. The merchant is responsible for the delivery and tracking of the item although SendOwl can record these details and inform the buyer of progress.
+          * services - services are goods not falling into the two previous categories - typically this is consultancy or project work. The merchant is responsible for contacting the buyer to arrange the carrying out of these services
+          * drip - digital products (or digital products within bundles) are released to the customer over time
+        enum: 
+          - digital
+          - software
+          - redirect
+          - tangible
+          - service
+          - drip
+     
